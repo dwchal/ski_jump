@@ -2,25 +2,54 @@ import SwiftUI
 import SceneKit
 import AppKit
 
+// Custom SCNView that accepts keyboard input
+class KeyboardSCNView: SCNView {
+    var keyDownHandler: ((UInt16) -> Void)?
+    var keyUpHandler: ((UInt16) -> Void)?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func keyDown(with event: NSEvent) {
+        keyDownHandler?(event.keyCode)
+    }
+
+    override func keyUp(with event: NSEvent) {
+        keyUpHandler?(event.keyCode)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.makeFirstResponder(self)
+    }
+}
+
 struct SkiJumpSceneView: NSViewRepresentable {
     let hill: SkiHill
     @ObservedObject var gameState: GameState
 
-    func makeNSView(context: Context) -> SCNView {
-        let scnView = SCNView()
+    func makeNSView(context: Context) -> KeyboardSCNView {
+        let scnView = KeyboardSCNView()
         scnView.scene = context.coordinator.scene
         scnView.backgroundColor = NSColor(red: 0.4, green: 0.6, blue: 0.9, alpha: 1.0)
         scnView.antialiasingMode = .multisampling4X
         scnView.allowsCameraControl = false
         scnView.showsStatistics = false
 
-        context.coordinator.setupKeyboardHandling(for: scnView)
+        // Set up keyboard handlers
+        scnView.keyDownHandler = { [weak context] keyCode in
+            context?.coordinator.handleKeyDown(keyCode)
+        }
+        scnView.keyUpHandler = { [weak context] keyCode in
+            context?.coordinator.handleKeyUp(keyCode)
+        }
 
         return scnView
     }
 
-    func updateNSView(_ nsView: SCNView, context: Context) {
+    func updateNSView(_ nsView: KeyboardSCNView, context: Context) {
         context.coordinator.updateGameState(gameState)
+        // Ensure we're first responder
+        nsView.window?.makeFirstResponder(nsView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -353,27 +382,15 @@ struct SkiJumpSceneView: NSViewRepresentable {
             updateCameraPosition()
         }
 
-        func setupKeyboardHandling(for view: SCNView) {
-            NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                self?.handleKeyDown(event)
-                return event
-            }
-
-            NSEvent.addLocalMonitorForEvents(matching: .keyUp) { [weak self] event in
-                self?.handleKeyUp(event)
-                return event
-            }
-        }
-
-        func handleKeyDown(_ event: NSEvent) {
-            keysPressed.insert(event.keyCode)
-            if event.keyCode == 49 {
+        func handleKeyDown(_ keyCode: UInt16) {
+            keysPressed.insert(keyCode)
+            if keyCode == 49 { // Space bar
                 handleSpacePress()
             }
         }
 
-        func handleKeyUp(_ event: NSEvent) {
-            keysPressed.remove(event.keyCode)
+        func handleKeyUp(_ keyCode: UInt16) {
+            keysPressed.remove(keyCode)
         }
 
         func handleSpacePress() {
