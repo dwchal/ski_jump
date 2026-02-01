@@ -38,12 +38,16 @@ struct SkiJumpSceneView: NSViewRepresentable {
         var skierNode: SCNNode!
         var skiTips: SCNNode!
 
-        // Physics
-        var velocity: SCNVector3 = SCNVector3Zero
-        var position: SCNVector3 = SCNVector3Zero
+        // Physics - use CGFloat for SceneKit compatibility
+        var velocityX: CGFloat = 0
+        var velocityY: CGFloat = 0
+        var velocityZ: CGFloat = 0
+        var positionX: CGFloat = 0
+        var positionY: CGFloat = 0
+        var positionZ: CGFloat = 0
         var isOnGround = true
-        var jumpStartPosition: SCNVector3 = SCNVector3Zero
-        var takeoffEdgeZ: Float = 0
+        var jumpStartZ: CGFloat = 0
+        var takeoffEdgeZ: CGFloat = 0
 
         // Animation
         var displayLink: CVDisplayLink?
@@ -104,19 +108,19 @@ struct SkiJumpSceneView: NSViewRepresentable {
         }
 
         func buildSkiJump() {
-            let inrunLength = hill.inrunLength
-            let inrunAngle = hill.inrunAngle * .pi / 180
-            let takeoffAngle = hill.takeoffAngle * .pi / 180
-            let landingAngle = hill.landingHillAngle * .pi / 180
+            let inrunLength = CGFloat(hill.inrunLength)
+            let inrunAngle = CGFloat(hill.inrunAngle) * .pi / 180
+            let takeoffAngle = CGFloat(hill.takeoffAngle) * .pi / 180
+            let landingAngle = CGFloat(hill.landingHillAngle) * .pi / 180
 
             // Calculate positions
             let startHeight = inrunLength * sin(inrunAngle)
             let startZ = -inrunLength * cos(inrunAngle)
 
             // Inrun track
-            let inrunGeometry = SCNBox(width: 3, height: 0.3, length: CGFloat(inrunLength + 10), chamferRadius: 0)
+            let inrunGeometry = SCNBox(width: 3, height: 0.3, length: inrunLength + 10, chamferRadius: 0)
             let inrunMaterial = SCNMaterial()
-            inrunMaterial.diffuse.contents = NSColor(red: 0.2, green: 0.5, blue: 0.2, alpha: 1.0)  // Green track
+            inrunMaterial.diffuse.contents = NSColor(red: 0.2, green: 0.5, blue: 0.2, alpha: 1.0)
             inrunMaterial.roughness.contents = 0.3
             inrunGeometry.materials = [inrunMaterial]
 
@@ -126,8 +130,8 @@ struct SkiJumpSceneView: NSViewRepresentable {
             scene.rootNode.addChildNode(inrunNode)
 
             // Track rails
-            for xOffset: Float in [-1.2, 1.2] {
-                let railGeometry = SCNBox(width: 0.1, height: 0.15, length: CGFloat(inrunLength + 10), chamferRadius: 0)
+            for xOffset: CGFloat in [-1.2, 1.2] {
+                let railGeometry = SCNBox(width: 0.1, height: 0.15, length: inrunLength + 10, chamferRadius: 0)
                 let railMaterial = SCNMaterial()
                 railMaterial.diffuse.contents = NSColor.red
                 railGeometry.materials = [railMaterial]
@@ -139,10 +143,10 @@ struct SkiJumpSceneView: NSViewRepresentable {
             }
 
             // Takeoff table
-            let tableLength: Float = 8.0
+            let tableLength: CGFloat = 8.0
             takeoffEdgeZ = tableLength * cos(takeoffAngle)
 
-            let tableGeometry = SCNBox(width: 3, height: 0.3, length: CGFloat(tableLength), chamferRadius: 0)
+            let tableGeometry = SCNBox(width: 3, height: 0.3, length: tableLength, chamferRadius: 0)
             let tableMaterial = SCNMaterial()
             tableMaterial.diffuse.contents = NSColor(red: 0.3, green: 0.6, blue: 0.3, alpha: 1.0)
             tableGeometry.materials = [tableMaterial]
@@ -153,12 +157,12 @@ struct SkiJumpSceneView: NSViewRepresentable {
             scene.rootNode.addChildNode(tableNode)
 
             // Landing hill
-            let landingLength: Float = Float(hill.hillSize) * 1.5
+            let landingLength = CGFloat(hill.hillSize) * 1.5
             let landingStartZ = takeoffEdgeZ + 5
             let landingEndZ = landingStartZ + landingLength * cos(landingAngle)
             let landingDropY = landingLength * sin(landingAngle)
 
-            let landingGeometry = SCNBox(width: 40, height: 0.5, length: CGFloat(landingLength), chamferRadius: 0)
+            let landingGeometry = SCNBox(width: 40, height: 0.5, length: landingLength, chamferRadius: 0)
             let landingMaterial = SCNMaterial()
             landingMaterial.diffuse.contents = NSColor.white
             landingMaterial.roughness.contents = 0.1
@@ -170,8 +174,8 @@ struct SkiJumpSceneView: NSViewRepresentable {
             scene.rootNode.addChildNode(landingNode)
 
             // K-point marker
-            let kPointZ = landingStartZ + Float(hill.kPoint) * cos(landingAngle) * 0.8
-            let kPointY = -Float(hill.kPoint) * sin(landingAngle) * 0.8 - 5
+            let kPointZ = landingStartZ + CGFloat(hill.kPoint) * cos(landingAngle) * 0.8
+            let kPointY = -CGFloat(hill.kPoint) * sin(landingAngle) * 0.8 - 5
 
             let kPointMarker = SCNNode(geometry: SCNBox(width: 1, height: 0.1, length: 5, chamferRadius: 0))
             kPointMarker.geometry?.firstMaterial?.diffuse.contents = NSColor.red
@@ -181,8 +185,9 @@ struct SkiJumpSceneView: NSViewRepresentable {
 
             // Distance markers every 10m
             for distance in stride(from: 50, through: hill.hillSize + 20, by: 10) {
-                let markerZ = landingStartZ + Float(distance) * cos(landingAngle) * 0.8
-                let markerY = -Float(distance) * sin(landingAngle) * 0.8 - 5
+                let distanceCG = CGFloat(distance)
+                let markerZ = landingStartZ + distanceCG * cos(landingAngle) * 0.8
+                let markerY = -distanceCG * sin(landingAngle) * 0.8 - 5
 
                 let markerGeometry = SCNBox(width: 0.5, height: 0.05, length: 2, chamferRadius: 0)
                 let markerMaterial = SCNMaterial()
@@ -236,9 +241,9 @@ struct SkiJumpSceneView: NSViewRepresentable {
 
                 let person = SCNNode(geometry: personGeometry)
                 person.position = SCNVector3(
-                    position.x + Float.random(in: -6...6),
+                    position.x + CGFloat.random(in: -6...6),
                     position.y + 4.5,
-                    position.z + Float.random(in: -28...28)
+                    position.z + CGFloat.random(in: -28...28)
                 )
                 scene.rootNode.addChildNode(person)
             }
@@ -257,9 +262,9 @@ struct SkiJumpSceneView: NSViewRepresentable {
 
             // Surrounding mountains
             for i in 0..<8 {
-                let angle = Float(i) * .pi / 4
-                let distance: Float = 200
-                let mountainGeometry = SCNCone(topRadius: 0, bottomRadius: CGFloat(Float.random(in: 40...80)), height: CGFloat(Float.random(in: 60...120)))
+                let angle = CGFloat(i) * .pi / 4
+                let distance: CGFloat = 200
+                let mountainGeometry = SCNCone(topRadius: 0, bottomRadius: CGFloat.random(in: 40...80), height: CGFloat.random(in: 60...120))
                 let mountainMaterial = SCNMaterial()
                 mountainMaterial.diffuse.contents = NSColor.white
                 mountainGeometry.materials = [mountainMaterial]
@@ -267,7 +272,7 @@ struct SkiJumpSceneView: NSViewRepresentable {
                 let mountain = SCNNode(geometry: mountainGeometry)
                 mountain.position = SCNVector3(
                     distance * cos(angle),
-                    Float.random(in: -20...10),
+                    CGFloat.random(in: -20...10),
                     distance * sin(angle)
                 )
                 scene.rootNode.addChildNode(mountain)
@@ -275,11 +280,11 @@ struct SkiJumpSceneView: NSViewRepresentable {
 
             // Pine trees on sides
             for _ in 0..<30 {
-                let treeX = Float.random(in: -100 ... -30)
-                let treeZ = Float.random(in: -50...150)
+                let treeX = CGFloat.random(in: -100 ... -30)
+                let treeZ = CGFloat.random(in: -50...150)
                 createTree(at: SCNVector3(treeX, getGroundHeight(at: treeX, z: treeZ), treeZ))
 
-                let treeX2 = Float.random(in: 30...100)
+                let treeX2 = CGFloat.random(in: 30...100)
                 createTree(at: SCNVector3(treeX2, getGroundHeight(at: treeX2, z: treeZ), treeZ))
             }
 
@@ -295,8 +300,7 @@ struct SkiJumpSceneView: NSViewRepresentable {
             scene.rootNode.addChildNode(groundNode)
         }
 
-        func getGroundHeight(at x: Float, z: Float) -> Float {
-            // Simplified ground height calculation
+        func getGroundHeight(at x: CGFloat, z: CGFloat) -> CGFloat {
             return -10 + sin(x * 0.05) * 5 + sin(z * 0.03) * 3
         }
 
@@ -353,14 +357,18 @@ struct SkiJumpSceneView: NSViewRepresentable {
         }
 
         func resetPosition() {
-            let inrunAngle = hill.inrunAngle * .pi / 180
-            let startHeight = hill.inrunLength * sin(inrunAngle)
-            let startZ = -hill.inrunLength * cos(inrunAngle)
+            let inrunAngle = CGFloat(hill.inrunAngle) * .pi / 180
+            let startHeight = CGFloat(hill.inrunLength) * sin(inrunAngle)
+            let startZ = -CGFloat(hill.inrunLength) * cos(inrunAngle)
 
-            position = SCNVector3(0, startHeight + 1.5, startZ - 5)
-            velocity = SCNVector3Zero
+            positionX = 0
+            positionY = startHeight + 1.5
+            positionZ = startZ - 5
+            velocityX = 0
+            velocityY = 0
+            velocityZ = 0
             isOnGround = true
-            jumpStartPosition = SCNVector3Zero
+            jumpStartZ = 0
 
             updateCameraPosition()
         }
@@ -396,7 +404,7 @@ struct SkiJumpSceneView: NSViewRepresentable {
                 startInrun()
             case .inrun:
                 // Check if near takeoff edge
-                if position.z > takeoffEdgeZ - 5 {
+                if positionZ > takeoffEdgeZ - 5 {
                     initiateJump()
                 }
             case .flight:
@@ -414,8 +422,8 @@ struct SkiJumpSceneView: NSViewRepresentable {
         }
 
         func initiateJump() {
-            let distanceFromEdge = abs(position.z - takeoffEdgeZ)
-            gameState.takeoffTiming = min(1.0, distanceFromEdge / 5.0)
+            let distanceFromEdge = abs(positionZ - takeoffEdgeZ)
+            gameState.takeoffTiming = Float(min(1.0, distanceFromEdge / 5.0))
 
             if distanceFromEdge < 1.0 {
                 DispatchQueue.main.async {
@@ -433,11 +441,11 @@ struct SkiJumpSceneView: NSViewRepresentable {
                 }
             }
 
-            jumpStartPosition = position
+            jumpStartZ = positionZ
 
             // Add upward velocity for jump
-            let jumpBoost: Float = 8.0 * (1.0 - gameState.takeoffTiming * 0.3)
-            velocity.y += jumpBoost
+            let jumpBoost: CGFloat = 8.0 * CGFloat(1.0 - gameState.takeoffTiming * 0.3)
+            velocityY += jumpBoost
 
             DispatchQueue.main.async {
                 self.gameState.phase = .flight
@@ -457,7 +465,7 @@ struct SkiJumpSceneView: NSViewRepresentable {
         }
 
         func updateGame() {
-            let deltaTime: Float = 1.0 / 60.0
+            let deltaTime: CGFloat = 1.0 / 60.0
 
             // Process input
             processInput(deltaTime: deltaTime)
@@ -486,28 +494,29 @@ struct SkiJumpSceneView: NSViewRepresentable {
             updateCameraPosition()
 
             // Update speed display
-            let speed = sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z)
+            let speed = sqrt(velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ)
             DispatchQueue.main.async {
-                self.gameState.currentSpeed = speed * 3.6  // m/s to km/h
+                self.gameState.currentSpeed = Float(speed * 3.6)  // m/s to km/h
             }
         }
 
-        func processInput(deltaTime: Float) {
+        func processInput(deltaTime: CGFloat) {
+            let dt = Float(deltaTime)
             // W key (13) - lean forward
             if keysPressed.contains(13) {
-                gameState.leanAngle = min(gameState.leanAngle + deltaTime * 2, 1.0)
+                gameState.leanAngle = min(gameState.leanAngle + dt * 2, 1.0)
             }
             // S key (1) - lean backward
             if keysPressed.contains(1) {
-                gameState.leanAngle = max(gameState.leanAngle - deltaTime * 2, -1.0)
+                gameState.leanAngle = max(gameState.leanAngle - dt * 2, -1.0)
             }
             // A key (0) - balance left
             if keysPressed.contains(0) {
-                gameState.balanceOffset = max(gameState.balanceOffset - deltaTime * 2, -1.0)
+                gameState.balanceOffset = max(gameState.balanceOffset - dt * 2, -1.0)
             }
             // D key (2) - balance right
             if keysPressed.contains(2) {
-                gameState.balanceOffset = min(gameState.balanceOffset + deltaTime * 2, 1.0)
+                gameState.balanceOffset = min(gameState.balanceOffset + dt * 2, 1.0)
             }
 
             // Return to neutral if no input
@@ -519,42 +528,42 @@ struct SkiJumpSceneView: NSViewRepresentable {
             }
         }
 
-        func updateInrun(deltaTime: Float) {
-            let inrunAngle = hill.inrunAngle * .pi / 180
-            let gravity: Float = 9.81
+        func updateInrun(deltaTime: CGFloat) {
+            let inrunAngle = CGFloat(hill.inrunAngle) * .pi / 180
+            let gravity: CGFloat = 9.81
 
             // Accelerate down the inrun
             let acceleration = gravity * sin(inrunAngle) * 0.95  // Some friction
-            velocity.z += acceleration * deltaTime * cos(inrunAngle)
-            velocity.y -= acceleration * deltaTime * sin(inrunAngle) * 0.5
+            velocityZ += acceleration * deltaTime * cos(inrunAngle)
+            velocityY -= acceleration * deltaTime * sin(inrunAngle) * 0.5
 
             // Cap speed
-            let maxSpeed: Float = 30.0
-            let currentSpeed = sqrt(velocity.z * velocity.z + velocity.y * velocity.y)
+            let maxSpeed: CGFloat = 30.0
+            let currentSpeed = sqrt(velocityZ * velocityZ + velocityY * velocityY)
             if currentSpeed > maxSpeed {
                 let scale = maxSpeed / currentSpeed
-                velocity.z *= scale
-                velocity.y *= scale
+                velocityZ *= scale
+                velocityY *= scale
             }
 
             // Update position
-            position.z += velocity.z * deltaTime
-            position.y += velocity.y * deltaTime
+            positionZ += velocityZ * deltaTime
+            positionY += velocityY * deltaTime
 
             // Keep on track
-            let expectedY = getTrackHeight(at: position.z) + 1.5
-            position.y = expectedY
+            let expectedY = getTrackHeight(at: positionZ) + 1.5
+            positionY = expectedY
 
             // Auto-jump if passed takeoff edge
-            if position.z > takeoffEdgeZ + 2 && gameState.phase == .inrun {
+            if positionZ > takeoffEdgeZ + 2 && gameState.phase == .inrun {
                 initiateJump()
             }
         }
 
-        func getTrackHeight(at z: Float) -> Float {
-            let inrunAngle = hill.inrunAngle * .pi / 180
-            let takeoffAngle = hill.takeoffAngle * .pi / 180
-            let landingAngle = hill.landingHillAngle * .pi / 180
+        func getTrackHeight(at z: CGFloat) -> CGFloat {
+            let inrunAngle = CGFloat(hill.inrunAngle) * .pi / 180
+            let takeoffAngle = CGFloat(hill.takeoffAngle) * .pi / 180
+            let landingAngle = CGFloat(hill.landingHillAngle) * .pi / 180
 
             if z < 0 {
                 // On inrun
@@ -572,58 +581,58 @@ struct SkiJumpSceneView: NSViewRepresentable {
             }
         }
 
-        func updateFlight(deltaTime: Float) {
-            let gravity: Float = 9.81
+        func updateFlight(deltaTime: CGFloat) {
+            let gravity: CGFloat = 9.81
 
             // Apply gravity
-            velocity.y -= gravity * deltaTime
+            velocityY -= gravity * deltaTime
 
             // Aerodynamic lift based on lean angle and speed
-            let speed = sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z)
-            let liftCoefficient: Float = 0.15 + gameState.leanAngle * 0.08
+            let speed = sqrt(velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ)
+            let liftCoefficient: CGFloat = 0.15 + CGFloat(gameState.leanAngle) * 0.08
             let lift = liftCoefficient * speed * speed * 0.001
-            velocity.y += lift * deltaTime * 60
+            velocityY += lift * deltaTime * 60
 
             // Air resistance
-            let drag: Float = 0.001
-            velocity.x *= (1.0 - drag)
-            velocity.y *= (1.0 - drag * 0.5)
-            velocity.z *= (1.0 - drag)
+            let drag: CGFloat = 0.001
+            velocityX *= (1.0 - drag)
+            velocityY *= (1.0 - drag * 0.5)
+            velocityZ *= (1.0 - drag)
 
             // Wind effect
             if gameState.windDirection.contains("Head") {
-                velocity.z -= gameState.windSpeed * 0.1 * deltaTime
+                velocityZ -= CGFloat(gameState.windSpeed) * 0.1 * deltaTime
             } else if gameState.windDirection.contains("Tail") {
-                velocity.z += gameState.windSpeed * 0.1 * deltaTime
+                velocityZ += CGFloat(gameState.windSpeed) * 0.1 * deltaTime
             }
 
             // Balance affects trajectory
-            velocity.x += gameState.balanceOffset * deltaTime * 2
+            velocityX += CGFloat(gameState.balanceOffset) * deltaTime * 2
 
             // Update position
-            position.x += velocity.x * deltaTime
-            position.y += velocity.y * deltaTime
-            position.z += velocity.z * deltaTime
+            positionX += velocityX * deltaTime
+            positionY += velocityY * deltaTime
+            positionZ += velocityZ * deltaTime
 
             // Update flight form quality based on balance
             gameState.flightFormQuality = max(0, 1.0 - abs(gameState.balanceOffset) * 0.3 - abs(gameState.leanAngle - 0.5) * 0.2)
 
             // Check for landing
-            let groundHeight = getTrackHeight(at: position.z)
-            if position.y <= groundHeight + 1.5 {
+            let groundHeight = getTrackHeight(at: positionZ)
+            if positionY <= groundHeight + 1.5 {
                 land()
             }
 
             // Calculate current distance
-            let distance = position.z - jumpStartPosition.z
+            let distance = positionZ - jumpStartZ
             DispatchQueue.main.async {
-                self.gameState.jumpDistance = distance * 1.2  // Scale factor
+                self.gameState.jumpDistance = Float(distance * 1.2)  // Scale factor
             }
         }
 
         func land() {
             // Calculate landing quality
-            let verticalSpeed = abs(velocity.y)
+            let verticalSpeed = abs(velocityY)
             let horizontalBalance = abs(gameState.balanceOffset)
 
             if gameState.isPreparingLanding && verticalSpeed < 15 && horizontalBalance < 0.3 {
@@ -649,22 +658,22 @@ struct SkiJumpSceneView: NSViewRepresentable {
             isOnGround = true
 
             // Slow down
-            velocity.y = 0
-            velocity.x *= 0.5
-            velocity.z *= 0.7
+            velocityY = 0
+            velocityX *= 0.5
+            velocityZ *= 0.7
         }
 
-        func updateLanding(deltaTime: Float) {
+        func updateLanding(deltaTime: CGFloat) {
             // Decelerate on ground
-            velocity.x *= 0.98
-            velocity.z *= 0.98
+            velocityX *= 0.98
+            velocityZ *= 0.98
 
-            position.x += velocity.x * deltaTime
-            position.z += velocity.z * deltaTime
-            position.y = getTrackHeight(at: position.z) + 1.5
+            positionX += velocityX * deltaTime
+            positionZ += velocityZ * deltaTime
+            positionY = getTrackHeight(at: positionZ) + 1.5
 
             // Stop when slow enough
-            let speed = sqrt(velocity.x * velocity.x + velocity.z * velocity.z)
+            let speed = sqrt(velocityX * velocityX + velocityZ * velocityZ)
             if speed < 1.0 && gameState.phase == .landed {
                 DispatchQueue.main.async {
                     self.gameState.calculateScore(for: self.hill)
@@ -675,35 +684,33 @@ struct SkiJumpSceneView: NSViewRepresentable {
 
         func updateCameraPosition() {
             // First person view from skier's head
-            cameraNode.position = position
+            cameraNode.position = SCNVector3(positionX, positionY, positionZ)
 
             // Look direction based on velocity and lean
-            var lookAngle: Float = 0
-
             if gameState.phase == .flight {
                 // In flight, camera tilts based on lean
-                lookAngle = -gameState.leanAngle * 0.3
+                let lookAngle = CGFloat(-gameState.leanAngle * 0.3)
                 cameraNode.eulerAngles = SCNVector3(
-                    lookAngle - 0.2,  // Slight downward look
-                    gameState.balanceOffset * 0.1,
-                    gameState.balanceOffset * 0.15
+                    lookAngle - 0.2,
+                    CGFloat(gameState.balanceOffset) * 0.1,
+                    CGFloat(gameState.balanceOffset) * 0.15
                 )
             } else if gameState.phase == .inrun {
                 // On inrun, look down the track
-                let inrunAngle = hill.inrunAngle * .pi / 180
+                let inrunAngle = CGFloat(hill.inrunAngle) * .pi / 180
                 cameraNode.eulerAngles = SCNVector3(-inrunAngle * 0.5, 0, 0)
             } else {
                 cameraNode.eulerAngles = SCNVector3(-0.1, 0, 0)
             }
 
             // Update ski tips position relative to camera
-            skierNode.position = position
+            skierNode.position = SCNVector3(positionX, positionY, positionZ)
             skierNode.eulerAngles = cameraNode.eulerAngles
 
             // Ski tips spread in V-style during flight
             if gameState.phase == .flight {
-                skiTips.childNodes[0].eulerAngles.y = -0.15  // Left ski angled out
-                skiTips.childNodes[1].eulerAngles.y = 0.15   // Right ski angled out
+                skiTips.childNodes[0].eulerAngles.y = -0.15
+                skiTips.childNodes[1].eulerAngles.y = 0.15
             } else {
                 skiTips.childNodes[0].eulerAngles.y = 0
                 skiTips.childNodes[1].eulerAngles.y = 0
